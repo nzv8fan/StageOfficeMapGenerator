@@ -14,3 +14,6 @@ Apache Batik is required for converting SVG files to PNG.
 
 # Notes
 generator.c in the cSrc directory creates SVG maps with no guarantee that all rooms are accessible. 
+
+# Example Map
+![Image of Office-Like Map](https://raw.githubusercontent.com/nzv8fan/StageOfficeMapGenerator/master/exampleMap.png)
