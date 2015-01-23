@@ -1,4 +1,4 @@
-package nz.net.brad;
+package nz.net.brad.mapgen;
 
 /**
  * A door connects two classes that implement ConnectedRoom together. 
@@ -54,10 +54,12 @@ public class Door {
 
 	/**
 	 * Opens a door. 
-	 * TODO: a door should probably only be opened if two rooms are connected to it. 
+	 * A door only opens if two rooms are connected to the door. 
 	 */
-	public void open() {
+	public Boolean open() {
+		if (leftRoom == null || rightRoom == null) return false;
 		opened = true;
+		return true;
 		
 	}
 

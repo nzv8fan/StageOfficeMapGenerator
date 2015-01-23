@@ -1,4 +1,4 @@
-package nz.net.brad;
+package nz.net.brad.mapgen;
 
 import java.util.HashSet;
 

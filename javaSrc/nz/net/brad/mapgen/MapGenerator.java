@@ -1,4 +1,4 @@
-package nz.net.brad;
+package nz.net.brad.mapgen;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -20,29 +20,38 @@ import org.apache.batik.transcoder.image.PNGTranscoder;
  */
 public class MapGenerator {
 	
-	
 	// Constants for defining the size of the office and drawing it as an svg and png.
-	private static final int NO_ROOM_HIGH = 4;
-	private static final int NO_ROOM_WIDE = 4;
+	private static final int NUM_ROOM_HIGH = 4;
+	private static final int NUM_ROOM_WIDE = 4;
 	
 	private static final int OUTSIDE_WIDTH = 30;
 	private static final int WALL_WIDTH = 10;
 	private static final int WALL_LENGTH = 40;
 	private static final int DOOR_WIDTH = 20;
-
+	
+	// Class fields
+	private final String mapFile;
+	private final int minimumDoorsToOpen;
 
 	/**
-	 * Main method which generates the map
-	 * @param args
-	 * @throws TranscoderException 
-	 * @throws IOException 
+	 * Constructor for the Map Generator Class
+	 * @param mapFileName the file name for the map to output, should be .png
+	 * @param minimumDoorsToOpen the minimum number of doors in the map to be opened. 
 	 */
-	public static void main(String[] args) {
-		
-		if (args.length < 1) {
-			System.out.println("USAGE: java nz.net.brad.MapGenerator outputMap.png optionalMinimumNumberOfDoorsOpen");
-			return;
-		}
+	public MapGenerator(String mapFileName, int minimumDoorsToOpen) {
+		mapFile = mapFileName;
+		this.minimumDoorsToOpen = minimumDoorsToOpen;
+	}
+
+	/**
+	 * Method for generating a PNG Map file
+	 * @param r required a random number generator
+	 * @return returns the number of doors opened int the map
+	 * @throws FileNotFoundException
+	 * @throws TranscoderException
+	 * @throws IOException
+	 */
+	public int generateMap(Random r) throws FileNotFoundException, TranscoderException, IOException {
 		
 		// Container to store the rooms in
 		ArrayList<ArrayList<Room>> rooms = new ArrayList<ArrayList<Room>>();
@@ -51,9 +60,9 @@ public class MapGenerator {
 		Hallway hallway = new Hallway();
 
 		// Generate an office with all doors closed. 
-		for (int i = 0; i < NO_ROOM_HIGH; i++) {
+		for (int i = 0; i < NUM_ROOM_HIGH; i++) {
 			rooms.add(new ArrayList<Room>());	// create a container to store a row of rooms. 
-			for (int j = 0; j < NO_ROOM_WIDE; j++) {
+			for (int j = 0; j < NUM_ROOM_WIDE; j++) {
 				
 				// get the reference for the north door, it is either the hallway or another room. 
 				Door north;
@@ -73,14 +82,14 @@ public class MapGenerator {
 				
 				// n.b. the south and east doors are always new as this is how the loop progresses. 
 				Door south;
-				if (i == NO_ROOM_HIGH - 1) {
+				if (i == NUM_ROOM_HIGH - 1) {
 					south = new Door(hallway,true);
 				} else {
 					south = new Door();
 				}
 				
 				Door east;
-				if (j == NO_ROOM_WIDE - 1) {
+				if (j == NUM_ROOM_WIDE - 1) {
 					east = new Door(hallway,true);
 				} else {
 					east = new Door();
@@ -92,16 +101,11 @@ public class MapGenerator {
 		}
 		
 		int numberOfDoorsOpened = 0;
-		int minimumDoorsToOpen = NO_ROOM_HIGH * NO_ROOM_WIDE - 1;
-		if (args.length > 1) {
-			minimumDoorsToOpen = new Integer(args[1]);
-		}
 		
 		// loop while the rooms are not all fully connected, and the number of doors opened is less than the minimum. 
 		while (rooms.get(0).get(0).isFullyConnected(16) == false || numberOfDoorsOpened < minimumDoorsToOpen) {
 			
 			// randomly chose a room and a door to open. 
-			Random r = new Random();
 			int roomNum = r.nextInt(16);
 			
 			Room roomToOpen = rooms.get(roomNum / 4).get(roomNum % 4);
@@ -127,23 +131,9 @@ public class MapGenerator {
 		StringWriter out = generateSvg(rooms);
 		
 		// Convert the SVG to a PNG file and save it. 
-		try {
-			convertSvgToPng(args[0], new StringReader(out.toString()));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			System.out.println("Error converting SVG to PNG");
-			return;
-		} catch (TranscoderException e) {
-			e.printStackTrace();
-			System.out.println("Error converting SVG to PNG");
-			return;
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.out.println("Error converting SVG to PNG");
-			return;
-		}
-		
-		System.out.println("Map with " + numberOfDoorsOpened + " doors opened written to: " + args[0]);
+		convertSvgToPng(mapFile, new StringReader(out.toString()));
+
+		return numberOfDoorsOpened;
 	}
 
 	/**
@@ -165,7 +155,7 @@ public class MapGenerator {
 	}
 
 	/**
-	 * Method to generate an SVG file of the map. 
+	 * Method to generate an SVG file of the map. Closed doors overlap walls to ensure that there are no gaps. 
 	 * @param rooms
 	 * @return
 	 */
@@ -185,22 +175,22 @@ public class MapGenerator {
 		out.append("<line x1=\"510\" y1=\"0\" x2=\"510\" y2=\"510\" style=\"stroke:rgb(0,0,0);stroke-width:3\"/>");
 
 		// Print out the horizontal walls.
-		for (int i = 0; i < NO_ROOM_HIGH; i++) {
-			for (int j = 0; j < NO_ROOM_WIDE; j++) {
+		for (int i = 0; i < NUM_ROOM_HIGH; i++) {
+			for (int j = 0; j < NUM_ROOM_WIDE; j++) {
 				int startOffsetX = OUTSIDE_WIDTH + j * (WALL_WIDTH + WALL_LENGTH * 2 + DOOR_WIDTH);
 				int startOffsetY = OUTSIDE_WIDTH + i * (WALL_WIDTH + WALL_LENGTH * 2 + DOOR_WIDTH) + 5;
 				out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY, startOffsetX + WALL_WIDTH + WALL_LENGTH, startOffsetY));
 				if (rooms.get(i).get(j).isNorthDoorOpen() == false) {
-					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX + WALL_WIDTH + WALL_LENGTH, startOffsetY, startOffsetX + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH, startOffsetY));
+					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX + WALL_WIDTH + WALL_LENGTH - 1, startOffsetY, startOffsetX + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH + 2, startOffsetY));
 				}
-				out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH, startOffsetY, startOffsetX + WALL_WIDTH + DOOR_WIDTH + 2 * WALL_LENGTH, startOffsetY));
-				if ( i == NO_ROOM_HIGH - 1) {
+				out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH, startOffsetY, startOffsetX + WALL_WIDTH + DOOR_WIDTH + 2 * WALL_LENGTH + 1, startOffsetY));
+				if ( i == NUM_ROOM_HIGH - 1) {
 					startOffsetY = OUTSIDE_WIDTH + (i+1) * (WALL_WIDTH + WALL_LENGTH * 2 + DOOR_WIDTH) + 5;
 					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY, startOffsetX + WALL_WIDTH + WALL_LENGTH, startOffsetY));
 					if (rooms.get(i).get(j).isSouthDoorOpen() == false) {
-						out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX + WALL_WIDTH + WALL_LENGTH, startOffsetY, startOffsetX + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH, startOffsetY));
+						out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX + WALL_WIDTH + WALL_LENGTH - 1, startOffsetY, startOffsetX + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH + 2, startOffsetY));
 					}
-					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH, startOffsetY, startOffsetX + WALL_WIDTH + DOOR_WIDTH + 2 * WALL_LENGTH, startOffsetY));
+					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH, startOffsetY, startOffsetX + WALL_WIDTH + DOOR_WIDTH + 2 * WALL_LENGTH + 1, startOffsetY));
 				}
 				
 	      
@@ -208,21 +198,21 @@ public class MapGenerator {
 		}
 
 		// Print out the vertical walls.
-		for (int i = 0; i < NO_ROOM_HIGH; i++) {
-			for (int j = 0; j < NO_ROOM_WIDE; j++) {
+		for (int i = 0; i < NUM_ROOM_HIGH; i++) {
+			for (int j = 0; j < NUM_ROOM_WIDE; j++) {
 				int startOffsetX = OUTSIDE_WIDTH + j * (WALL_WIDTH + WALL_LENGTH * 2 + DOOR_WIDTH) + 5;
 				int startOffsetY = OUTSIDE_WIDTH + i * (WALL_WIDTH + WALL_LENGTH * 2 + DOOR_WIDTH);
 			      
 				out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY, startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH));
 				if (rooms.get(i).get(j).isWestDoorOpen() == false) {
-					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH, startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH));
+					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH - 1, startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH + 2));
 				}
 				out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH, startOffsetX, startOffsetY + 2 * WALL_WIDTH + DOOR_WIDTH + 2 * WALL_LENGTH));
-				if ( j == NO_ROOM_WIDE - 1) {
+				if ( j == NUM_ROOM_WIDE - 1) {
 					startOffsetX = OUTSIDE_WIDTH + (j+1) * (WALL_WIDTH + WALL_LENGTH * 2 + DOOR_WIDTH) + 5;
 					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY, startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH));
 					if (rooms.get(i).get(j).isEastDoorOpen() == false) {
-						out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH, startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH));
+						out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH - 1, startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH + 2));
 					}
 					out.append(String.format("<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke:rgb(0,0,0);stroke-width:10\"/>\n", startOffsetX, startOffsetY + WALL_WIDTH + WALL_LENGTH + DOOR_WIDTH, startOffsetX, startOffsetY + 2 * WALL_WIDTH + DOOR_WIDTH + 2 * WALL_LENGTH));
 				}
