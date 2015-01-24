@@ -11,6 +11,7 @@ import javax.imageio.ImageIO;
 import org.apache.batik.transcoder.TranscoderException;
 
 import nz.net.brad.mapgen.MapGenerator;
+import nz.net.brad.playerstage.PlayerConfigGenerator;
 import nz.net.brad.playerstage.StageConfigGenerator;
 
 /**
@@ -26,24 +27,25 @@ public class ExperimentConfigGenerator {
 
 	/**
 	 * Entry point for generating configuration files for Player/Stage
-	 * @param args
+	 * @param args playerConfig.cfg stageConfig.world numberOfRobots outputMap.png optionalMinimumNumberOfDoorsOpen
 	 */
 	public static void main(String[] args) {
 		
-		if (args.length < 3) {
-			System.out.println("USAGE: java nz.net.brad.ExperimentConfigGenerator stageConfig.world numberOfRobots outputMap.png optionalMinimumNumberOfDoorsOpen");
+		if (args.length < 4) {
+			System.out.println("USAGE: java nz.net.brad.ExperimentConfigGenerator playerConfig.cfg stageConfig.world numberOfRobots outputMap.png optionalMinimumNumberOfDoorsOpen");
 			return;
 		}
 		
-		final String stageConfigFilename = args[0];
+		final String playerConfigFileName = args[0];
+		final String stageConfigFilename = args[1];
 		
-		final int NUM_OF_ROBOTS = Integer.valueOf(args[1]);
+		final int NUM_OF_ROBOTS = Integer.valueOf(args[2]);
 		
-		final String mapFileName = args[2];
+		final String mapFileName = args[3];
 		
 		int minimumDoorsToOpen = NUM_ROOM_HIGH * NUM_ROOM_WIDE - 1;
-		if (args.length > 3) {
-			minimumDoorsToOpen = new Integer(args[3]);
+		if (args.length > 4) {
+			minimumDoorsToOpen = new Integer(args[4]);
 		}
 		
 		Random r = new Random();	// TODO: this can be seeded to recreate identical maps/files for testing.
@@ -73,10 +75,21 @@ public class ExperimentConfigGenerator {
 		try {
 			StageConfigGenerator stageConfig = new StageConfigGenerator(r);
 			stageConfig.generateConfigFile(stageConfigFilename,NUM_OF_ROBOTS,occupancyGrid,mapFileName);
-			System.out.println("Writen Stage Configuration File with " + NUM_OF_ROBOTS + " Robots to: " + "stage.world");
+			System.out.println("Writen Stage Configuration File with " + NUM_OF_ROBOTS + " Robots to: " + stageConfigFilename);
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.out.println("Error writing Stage Configuration File");
+			return;
+		}
+		
+		// Generate a player config file. 
+		try {
+			PlayerConfigGenerator playerConfig = new PlayerConfigGenerator();
+			playerConfig.generateConfigFile(playerConfigFileName, NUM_OF_ROBOTS, stageConfigFilename, mapFileName);
+			System.out.println("Writen Player Configuration File with " + NUM_OF_ROBOTS + " Robots to: " + playerConfigFileName);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println("Error writing Player Configuration File");
 			return;
 		}
 

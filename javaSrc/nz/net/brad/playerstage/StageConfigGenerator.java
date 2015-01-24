@@ -6,6 +6,11 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Random;
 
+/**
+ * Simple class for generating Stage configuration files. 
+ * @author Brad
+ *
+ */
 public class StageConfigGenerator {
 	
 	private final Random r;
@@ -20,10 +25,10 @@ public class StageConfigGenerator {
 
 	/**
 	 * Main method for writing a Stage Configuration File. 
-	 * @param outputFileName 
-	 * @param NUM_ROBOTS 
-	 * @param occupancyGrid
-	 * @param mapFileName 
+	 * @param outputFileName the name of the Stage configuration file to write to
+	 * @param NUM_ROBOTS the number of robots to simulate
+	 * @param occupancyGrid the occupancy grid representing the map and robot locations
+	 * @param mapFileName the name of the PNG map file this simulation will use
 	 * @throws IOException
 	 */
 	public void generateConfigFile(final String outputFileName, final int NUM_ROBOTS, Boolean[][] occupancyGrid, final String mapFileName) throws IOException {
